@@ -1,0 +1,12 @@
+.worktrees/
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+*.log
+service-account*.json
+firebase-adminsdk*.json
+*-credentials.json
+functions/lib/
+coverage/
