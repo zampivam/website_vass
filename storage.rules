@@ -1,0 +1,22 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function verified() { return signedIn() && request.auth.token.email_verified == true; }
+    function staff() { return signedIn() && request.auth.token.staff == true; }
+    function allowedFile() {
+      return request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType.matches('application/pdf|image/png|image/jpeg|application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    }
+
+    match /families/{familyId}/documents/{documentId} {
+      allow read: if false;
+      allow create, update: if allowedFile()
+        && request.resource.metadata.familyId == familyId
+        && request.resource.metadata.documentId == documentId
+        && request.resource.metadata.uploadedByUid == request.auth.uid
+        && ((verified() && request.auth.uid == familyId) || staff());
+      allow delete: if (verified() && request.auth.uid == familyId) || staff();
+    }
+  }
+}

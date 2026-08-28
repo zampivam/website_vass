@@ -1,0 +1,8 @@
+Options -MultiViews
+RewriteEngine On
+
+# Keep real files and directories available, and send public application routes
+# through the React entry point.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]

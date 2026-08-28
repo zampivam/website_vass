@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function verified() { return signedIn() && request.auth.token.email_verified == true; }
+    function staff() { return signedIn() && request.auth.token.staff == true; }
+    function ownFamily(familyId) { return verified() && request.auth.uid == familyId; }
+
+    match /families/{familyId} {
+      allow read: if staff() || ownFamily(familyId);
+      allow create, update: if ownFamily(familyId)
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.keys().hasOnly([
+          'caregiverFirstName', 'caregiverLastName', 'relationship', 'email', 'phone',
+          'preferredContact', 'addressLine1', 'addressLine2', 'city', 'state',
+          'postalCode', 'intakeStatus', 'createdAt', 'updatedAt'
+        ]);
+      allow create, update, delete: if staff();
+
+      match /children/{childId} {
+        allow read: if staff() || ownFamily(familyId);
+        allow create, update: if ownFamily(familyId)
+          && request.resource.data.keys().hasOnly([
+            'firstName', 'lastName', 'preferredName', 'dateOfBirth', 'school', 'grade',
+            'diagnosisStatus', 'primaryLanguage', 'requestedServices', 'insuranceStatus',
+            'insuranceProvider', 'memberId', 'groupNumber', 'subscriberName',
+            'subscriberRelationship', 'createdAt', 'updatedAt'
+          ]);
+        allow create, update, delete: if staff();
+      }
+
+      match /documents/{documentId} {
+        allow read: if staff() || ownFamily(familyId);
+        allow create: if ownFamily(familyId)
+          && request.resource.data.familyId == familyId
+          && request.resource.data.documentId == documentId
+          && request.resource.data.uploadedByUid == request.auth.uid
+          && request.resource.data.uploadedByRole == 'parent'
+          && request.resource.data.storagePath == 'families/' + familyId + '/documents/' + documentId;
+        allow update: if ownFamily(familyId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'uploadedAt'])
+          && request.resource.data.status == 'available';
+        allow delete: if ownFamily(familyId);
+        allow create, update, delete: if staff();
+      }
+    }
+
+    match /activity/{activityId} {
+      allow read: if staff();
+      allow write: if false;
+    }
+
+    match /{path=**}/documents/{documentId} {
+      allow read: if staff();
+    }
+  }
+}

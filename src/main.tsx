@@ -22,8 +22,10 @@ import {
   GraduationCap,
   MessageSquare
 } from "lucide-react";
-import type { Session } from "@supabase/supabase-js";
-import { isSupabaseConfigured, supabase } from "./supabase";
+import { ParentPortal } from "./portal/ParentPortal";
+import { AdminPortal } from "./portal/AdminPortal";
+import { JobDetailPage, jobOpenings } from "./jobs";
+import { applyHomeSeo } from "./seo";
 import "./styles.css";
 
 type PortalView = "login" | "signup";
@@ -243,10 +245,10 @@ function Milestones() {
       </div>
       <div className="milestones__panel">
         <ShieldCheck aria-hidden="true" />
-        <h3>HIPAA-compliant storage</h3>
+        <h3>Private document access</h3>
         <p>
-          Documents are kept in private storage with authenticated access and row-level security, so only the appropriate family
-          and clinical team members can access them.
+          The portal is designed so each family can access only its own records, while authorized staff access requires a separate
+          verified role. Production use begins only after VASS completes its compliance and Firebase account setup.
         </p>
       </div>
     </section>
@@ -329,27 +331,6 @@ function MulticulturalCare() {
 }
 
 function Jobs() {
-  const hiringPoints = [
-    "Work with children and families in a relationship-based, play-centered setting.",
-    "Collaborate with licensed behavior analysts who value clear communication and ethical care.",
-    "Support meaningful progress in homes, schools, and community routines."
-  ];
-
-  const jobAreas = [
-    {
-      title: "Who we look for",
-      copy: "We welcome interest from people who enjoy working with children, communicate well with families, and bring patience, warmth, and professionalism to their work."
-    },
-    {
-      title: "What to expect",
-      copy: "Openings may vary by location and service needs, but we value team members who are dependable, coachable, and committed to thoughtful, individualized support."
-    },
-    {
-      title: "How to apply",
-      copy: "Send your resume and a short note of interest to our team. If there is a fit, we will follow up about next steps."
-    }
-  ];
-
   return (
     <section className="jobs-section" id="jobs">
       <div className="jobs-shell">
@@ -357,477 +338,23 @@ function Jobs() {
           <span className="jobs-eyebrow">Careers at VASS</span>
           <h2>Join a team that enjoys helping children grow through everyday moments.</h2>
           <p>
-            We are always glad to hear from thoughtful people who care about children, respect families, and want to do meaningful work in autism and ABA therapy.
+            We welcome dependable professionals who respect families, enjoy working with children, and want to build useful skills through thoughtful ABA care.
           </p>
-          <div className="jobs-points">
-            {hiringPoints.map((point) => (
-              <span key={point}>
-                <CheckCircle2 aria-hidden="true" />
-                {point}
-              </span>
-            ))}
-          </div>
         </div>
 
-        <div className="jobs-grid">
-          {jobAreas.map((item) => (
-            <article className="jobs-card" key={item.title}>
-              <h3>{item.title}</h3>
-              <p>{item.copy}</p>
+        <div className="jobs-grid jobs-grid--openings">
+          {jobOpenings.map((job) => (
+            <article className="jobs-card jobs-card--opening" key={job.slug}>
+              <span className="jobs-card__meta">Now accepting applications</span>
+              <h3>{job.title}</h3>
+              <p>{job.summary}</p>
+              <a className="text-link" href={`/jobs/${job.slug}`}>
+                View position
+                <ArrowRight aria-hidden="true" />
+              </a>
             </article>
           ))}
-          <article className="jobs-card jobs-card--cta">
-            <h3>Apply by email</h3>
-            <p>Please include your resume, your location, and a brief introduction about your experience working with children or families.</p>
-            <a className="button button--primary" href="mailto:admin@vassllc.org?subject=VASS%20Employment%20Inquiry">
-              Apply now
-              <ArrowRight aria-hidden="true" />
-            </a>
-          </article>
         </div>
-      </div>
-    </section>
-  );
-}
-
-function SecurePortal() {
-  const [session, setSession] = React.useState<Session | null>(null);
-  const [portalView, setPortalView] = React.useState<PortalView>("login");
-  const [portalTab, setPortalTab] = React.useState<PortalTab>("request");
-  const [authForm, setAuthForm] = React.useState({ email: "", password: "", parentName: "", phone: "" });
-  const [childForm, setChildForm] = React.useState({
-    firstName: "",
-    lastInitial: "",
-    diagnosisStatus: "diagnosed",
-    school: "",
-    primaryLanguage: "English",
-    translatorNeeded: false
-  });
-  const [requestForm, setRequestForm] = React.useState({
-    requestType: "assessment",
-    preferredContact: "phone",
-    preferredTimes: "",
-    message: ""
-  });
-  const [documentForm, setDocumentForm] = React.useState({
-    documentType: "diagnostic_report",
-    file: null as File | null
-  });
-  const [status, setStatus] = React.useState("");
-  const [loading, setLoading] = React.useState(false);
-
-  React.useEffect(() => {
-    if (!supabase) return;
-
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-    });
-
-    return () => data.subscription.unsubscribe();
-  }, []);
-
-  async function handleAuth(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!supabase) {
-      setStatus("Supabase is not configured for this environment yet.");
-      return;
-    }
-
-    setLoading(true);
-    setStatus("");
-    try {
-      if (portalView === "signup") {
-        const { data, error } = await supabase.auth.signUp({
-          email: authForm.email,
-          password: authForm.password,
-          options: { data: { parent_name: authForm.parentName } }
-        });
-        if (error) throw error;
-
-        const userId = data.session?.user.id;
-        if (userId) {
-          const { error: profileError } = await supabase.from("parent_profiles").upsert({
-            user_id: userId,
-            parent_name: authForm.parentName,
-            preferred_phone: authForm.phone,
-            relationship_to_child: "Parent or guardian",
-            communication_preference: "phone"
-          });
-          if (profileError) throw profileError;
-        }
-        setStatus(
-          data.session
-            ? "Account created and signed in."
-            : "Account created. Please check your email if confirmation is enabled, then log in."
-        );
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: authForm.email,
-          password: authForm.password
-        });
-        if (error) throw error;
-        setStatus("Signed in.");
-      }
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Something went wrong.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleRequest(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!supabase || !session?.user) {
-      setStatus("Please sign in before submitting a request.");
-      return;
-    }
-
-    setLoading(true);
-    setStatus("");
-    try {
-      const childPayload = {
-        parent_user_id: session.user.id,
-        first_name: childForm.firstName,
-        last_initial: childForm.lastInitial,
-        diagnosis_status: childForm.diagnosisStatus,
-        school_or_program: childForm.school,
-        primary_language: childForm.primaryLanguage,
-        translator_needed: childForm.translatorNeeded
-      };
-
-      const { data: child, error: childError } = await supabase.from("children").insert(childPayload).select("id").single();
-      if (childError) throw childError;
-
-      const { error: requestError } = await supabase.from("service_requests").insert({
-        parent_user_id: session.user.id,
-        child_id: child.id,
-        request_type: requestForm.requestType,
-        preferred_contact: requestForm.preferredContact,
-        preferred_times: requestForm.preferredTimes,
-        message: requestForm.message
-      });
-      if (requestError) throw requestError;
-
-      setStatus("Request submitted securely. The VASS team can review it in Supabase.");
-      setChildForm({
-        firstName: "",
-        lastInitial: "",
-        diagnosisStatus: "diagnosed",
-        school: "",
-        primaryLanguage: "English",
-        translatorNeeded: false
-      });
-      setRequestForm({ requestType: "assessment", preferredContact: "phone", preferredTimes: "", message: "" });
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Something went wrong.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleDocumentUpload(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const selectedFile = documentForm.file;
-
-    if (!supabase || !session?.user || !selectedFile) {
-      setStatus("Please sign in and choose a file before uploading.");
-      return;
-    }
-
-    setLoading(true);
-    setStatus("");
-    try {
-      const safeName = selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, "-");
-      const filePath = `${session.user.id}/general/${Date.now()}-${safeName}`;
-      const { error: uploadError } = await supabase.storage.from("care-documents").upload(filePath, selectedFile, {
-        cacheControl: "0",
-        upsert: false
-      });
-      if (uploadError) throw uploadError;
-
-      const { error: rowError } = await supabase.from("documents").insert({
-        parent_user_id: session.user.id,
-        document_type: documentForm.documentType,
-        file_name: selectedFile.name,
-        file_path: filePath,
-        file_type: selectedFile.type,
-        file_size: selectedFile.size
-      });
-      if (rowError) throw rowError;
-
-      setStatus("Document uploaded to the private care-documents bucket.");
-      setDocumentForm({ documentType: "diagnostic_report", file: null });
-      form.reset();
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Something went wrong.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <section className="portal-section" id="portal">
-      <div className="portal-intro">
-        <LockKeyhole aria-hidden="true" />
-        <h2>A simple, secure way to get started</h2>
-        <p>
-          Create an account to request a meeting or assessment and securely share diagnostic reports or intake forms with our team.
-        </p>
-      </div>
-
-      <div className="portal-shell">
-        {!isSupabaseConfigured ? (
-          <div className="portal-alert">
-            <ShieldCheck aria-hidden="true" />
-            <p>Supabase environment variables are required before the portal can transmit family information.</p>
-          </div>
-        ) : null}
-
-        {!session ? (
-          <form className="portal-form" onSubmit={handleAuth}>
-            <div className="segmented" aria-label="Portal account mode">
-              <button
-                className={portalView === "login" ? "active" : ""}
-                type="button"
-                onClick={() => setPortalView("login")}
-              >
-                Log in
-              </button>
-              <button
-                className={portalView === "signup" ? "active" : ""}
-                type="button"
-                onClick={() => setPortalView("signup")}
-              >
-                Sign up
-              </button>
-            </div>
-            {portalView === "signup" ? (
-              <div className="form-row">
-                <label>
-                  Parent or guardian name
-                  <input
-                    value={authForm.parentName}
-                    onChange={(event) => setAuthForm({ ...authForm, parentName: event.target.value })}
-                    required
-                  />
-                </label>
-                <label>
-                  Phone
-                  <input
-                    value={authForm.phone}
-                    onChange={(event) => setAuthForm({ ...authForm, phone: event.target.value })}
-                    type="tel"
-                    required
-                  />
-                </label>
-              </div>
-            ) : null}
-            <div className="form-row">
-              <label>
-                Email
-                <input
-                  value={authForm.email}
-                  onChange={(event) => setAuthForm({ ...authForm, email: event.target.value })}
-                  type="email"
-                  autoComplete="email"
-                  required
-                />
-              </label>
-              <label>
-                Password
-                <input
-                  value={authForm.password}
-                  onChange={(event) => setAuthForm({ ...authForm, password: event.target.value })}
-                  type="password"
-                  autoComplete={portalView === "login" ? "current-password" : "new-password"}
-                  minLength={8}
-                  required
-                />
-              </label>
-            </div>
-            <button className="button button--primary" type="submit" disabled={loading}>
-              {loading ? "Working..." : portalView === "login" ? "Log in securely" : "Create account"}
-            </button>
-          </form>
-        ) : (
-          <div className="portal-workspace">
-            <div className="portal-workspace__top">
-              <div>
-                <p>Signed in as</p>
-                <strong>{session.user.email}</strong>
-              </div>
-              <button className="button button--secondary" type="button" onClick={() => supabase?.auth.signOut()}>
-                Sign out
-              </button>
-            </div>
-            <div className="tab-list" role="tablist" aria-label="Parent portal tasks">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={portalTab === "request"}
-                className={portalTab === "request" ? "active" : ""}
-                onClick={() => setPortalTab("request")}
-              >
-                <CalendarDays aria-hidden="true" />
-                Request care
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={portalTab === "documents"}
-                className={portalTab === "documents" ? "active" : ""}
-                onClick={() => setPortalTab("documents")}
-              >
-                <FileUp aria-hidden="true" />
-                Upload forms
-              </button>
-            </div>
-
-            {portalTab === "request" ? (
-              <form className="portal-form" onSubmit={handleRequest}>
-                <div className="form-row">
-                  <label>
-                    Client first name
-                    <input
-                      value={childForm.firstName}
-                      onChange={(event) => setChildForm({ ...childForm, firstName: event.target.value })}
-                      required
-                    />
-                  </label>
-                  <label>
-                    Last initial
-                    <input
-                      value={childForm.lastInitial}
-                      onChange={(event) => setChildForm({ ...childForm, lastInitial: event.target.value })}
-                      maxLength={1}
-                    />
-                  </label>
-                </div>
-                <div className="form-row">
-                  <label>
-                    Primary language spoken
-                    <input
-                      value={childForm.primaryLanguage}
-                      onChange={(event) => setChildForm({ ...childForm, primaryLanguage: event.target.value })}
-                      placeholder="English, Spanish, etc."
-                      required
-                    />
-                  </label>
-                  <label>
-                    Translator needed
-                    <div className="checkbox-align">
-                      <input
-                        type="checkbox"
-                        checked={childForm.translatorNeeded}
-                        onChange={(event) => setChildForm({ ...childForm, translatorNeeded: event.target.checked })}
-                        style={{ width: "20px", height: "20px", cursor: "pointer", border: "1px solid var(--line)" }}
-                      />
-                      <span style={{ fontSize: "0.95rem", fontWeight: "650" }}>Yes, request a translator</span>
-                    </div>
-                  </label>
-                </div>
-                <div className="form-row">
-                  <label>
-                    Diagnosis status
-                    <select
-                      value={childForm.diagnosisStatus}
-                      onChange={(event) => setChildForm({ ...childForm, diagnosisStatus: event.target.value })}
-                    >
-                      <option value="diagnosed">Diagnosed</option>
-                      <option value="seeking_assessment">Seeking assessment</option>
-                      <option value="unsure">Unsure</option>
-                    </select>
-                  </label>
-                  <label>
-                    School or program
-                    <input
-                      value={childForm.school}
-                      onChange={(event) => setChildForm({ ...childForm, school: event.target.value })}
-                    />
-                  </label>
-                </div>
-                <div className="form-row">
-                  <label>
-                    Request type
-                    <select
-                      value={requestForm.requestType}
-                      onChange={(event) => setRequestForm({ ...requestForm, requestType: event.target.value })}
-                    >
-                      <option value="assessment">Assessment</option>
-                      <option value="meeting">Meeting</option>
-                      <option value="records_review">Records review</option>
-                      <option value="behavior_consultation">Behavior consultation</option>
-                      <option value="caregiver_training">Caregiver training</option>
-                      <option value="insurance_support">Insurance support</option>
-                    </select>
-                  </label>
-                  <label>
-                    Preferred contact
-                    <select
-                      value={requestForm.preferredContact}
-                      onChange={(event) => setRequestForm({ ...requestForm, preferredContact: event.target.value })}
-                    >
-                      <option value="phone">Phone</option>
-                      <option value="email">Email</option>
-                    </select>
-                  </label>
-                </div>
-                <label>
-                  Preferred meeting times
-                  <input
-                    value={requestForm.preferredTimes}
-                    onChange={(event) => setRequestForm({ ...requestForm, preferredTimes: event.target.value })}
-                    placeholder="Morning, afternoon, specific days..."
-                  />
-                </label>
-                <label>
-                  Notes for the clinical team
-                  <textarea
-                    value={requestForm.message}
-                    onChange={(event) => setRequestForm({ ...requestForm, message: event.target.value })}
-                    rows={4}
-                  />
-                </label>
-                <button className="button button--primary" type="submit" disabled={loading}>
-                  Submit request
-                </button>
-              </form>
-            ) : (
-              <form className="portal-form" onSubmit={handleDocumentUpload}>
-                <div className="form-row">
-                  <label>
-                    Document type
-                    <select
-                      value={documentForm.documentType}
-                      onChange={(event) => setDocumentForm({ ...documentForm, documentType: event.target.value })}
-                    >
-                      <option value="diagnostic_report">Diagnostic report</option>
-                      <option value="new_client_intake">New client intake</option>
-                      <option value="iep_or_school">IEP or school document</option>
-                      <option value="insurance_card">Insurance card</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </label>
-                  <label>
-                    File
-                    <input
-                      type="file"
-                      accept=".pdf,.png,.jpg,.jpeg,.docx"
-                      onChange={(event) => setDocumentForm({ ...documentForm, file: event.target.files?.[0] ?? null })}
-                      required
-                    />
-                  </label>
-                </div>
-                <button className="button button--primary" type="submit" disabled={loading}>
-                  Upload securely
-                </button>
-              </form>
-            )}
-          </div>
-        )}
-        {status ? <p className="portal-status">{status}</p> : null}
       </div>
     </section>
   );
@@ -917,7 +444,7 @@ function LocationAndFaq() {
           {
             question: "Is the portal HIPAA-ready?",
             answer:
-              "The website uses Supabase Auth, private storage, and row-level security patterns. Before production use with PHI, the organization must confirm its Supabase HIPAA add-on, BAA, and project security settings."
+              "The portal uses authenticated access and private document storage. VASS must complete its Firebase production, billing, and HIPAA configuration before collecting protected health information."
           }
         ].map((item) => (
           <details key={item.question}>
@@ -949,6 +476,7 @@ function Footer() {
 }
 
 function App() {
+  React.useEffect(() => applyHomeSeo(), []);
   return (
     <>
       <Header />
@@ -959,7 +487,7 @@ function App() {
         <About />
         <MulticulturalCare />
         <Jobs />
-        <SecurePortal />
+        <ParentPortal />
         <LocationAndFaq />
       </main>
       <Footer />
@@ -967,8 +495,16 @@ function App() {
   );
 }
 
+function Route() {
+  const path = window.location.pathname.replace(/\/$/, "") || "/";
+  if (path === "/admin") return <AdminPortal />;
+  const job = jobOpenings.find((item) => path === `/jobs/${item.slug}`);
+  if (job) return <JobDetailPage job={job} />;
+  return <App />;
+}
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <Route />
   </React.StrictMode>
 );
