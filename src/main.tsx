@@ -100,7 +100,7 @@ function BrandMark({ compact = false }: { compact?: boolean }) {
         {!compact && (
           <span className="brand__meta">
             <span className="brand__tagline">Welcome to Positive Change</span>
-            <span className="brand__place">Harrisonburg, VA</span>
+            <span className="brand__place">Harrisonburg, VA · Woodstock, VA · Shenandoah, VA (Page County)</span>
           </span>
         )}
       </span>
