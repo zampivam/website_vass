@@ -77,7 +77,7 @@ export function AuthPanel({ staffMode = false }: AuthPanelProps) {
         <p>
           {staffMode
             ? "Your account must have the VASS staff permission."
-            : "Your records stay behind your verified Firebase account."}
+            : "Secured by Firebase"}
         </p>
       </div>
 
