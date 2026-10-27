@@ -3,6 +3,7 @@ import {
   canAccessAdmin,
   canAccessFamily,
   safePortalError,
+  signupVerificationMessage,
   validateDocument
 } from "./policy";
 
@@ -65,5 +66,13 @@ describe("privacy-safe errors", () => {
   it("does not expose upstream messages that may contain private information", () => {
     const upstream = new Error("Upload failed for Child Name insurance-card.jpg");
     expect(safePortalError(upstream)).toBe("We could not complete that request. Please try again or contact VASS.");
+  });
+});
+
+describe("signup verification guidance", () => {
+  it("tells parents to check Spam for an email labeled VASS IT", () => {
+    expect(signupVerificationMessage()).toBe(
+      'Account created. Check your inbox or Spam folder for an email labeled "VASS IT", then verify your account before opening family records.'
+    );
   });
 });

@@ -7,7 +7,7 @@ import {
   signInWithPopup
 } from "firebase/auth";
 import { auth, googleProvider } from "../firebase";
-import { safePortalError } from "./policy";
+import { safePortalError, signupVerificationMessage } from "./policy";
 
 type AuthPanelProps = {
   staffMode?: boolean;
@@ -29,7 +29,7 @@ export function AuthPanel({ staffMode = false }: AuthPanelProps) {
       if (view === "signup" && !staffMode) {
         const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
         await sendEmailVerification(credential.user);
-        setStatus("Account created. Check your email to verify it before opening family records.");
+        setStatus(signupVerificationMessage());
       } else {
         await signInWithEmailAndPassword(auth, email.trim(), password);
       }

@@ -28,6 +28,15 @@ export function buildUploadNotification(portalBaseUrl: string) {
   };
 }
 
+export function buildFamilyNotification(portalBaseUrl: string) {
+  const adminUrl = `${portalBaseUrl.replace(/\/$/, "")}/admin`;
+  return {
+    subject: "New parent portal intake",
+    text: `A new parent portal intake was submitted. Log in to review.\n\n${adminUrl}`,
+    html: `<p>A new parent portal intake was submitted. Log in to review.</p><p><a href="${adminUrl}">Open the staff portal</a></p>`
+  };
+}
+
 export function buildActivityRecord(input: ActivityInput): ActivityInput {
   return {
     action: input.action,

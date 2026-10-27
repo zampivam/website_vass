@@ -5,8 +5,9 @@ import { getStorage } from "firebase-admin/storage";
 import { defineSecret } from "firebase-functions/params";
 import { onRequest } from "firebase-functions/v2/https";
 import { onObjectFinalized } from "firebase-functions/v2/storage";
+import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import nodemailer from "nodemailer";
-import { authorizeDownload, buildUploadNotification } from "./policy.js";
+import { authorizeDownload, buildFamilyNotification, buildUploadNotification } from "./policy.js";
 
 initializeApp();
 
@@ -109,5 +110,33 @@ export const notifyStaffOfParentUpload = onObjectFinalized(
       auth: { user: smtpUser.value(), pass: smtpPass.value() }
     });
     await transporter.sendMail({ from: smtpUser.value(), to: recipients, ...message });
+  }
+);
+
+export const notifyStaffOfNewIntake = onDocumentCreated(
+  {
+    document: "families/{familyId}",
+    region: "us-central1",
+    secrets: [smtpUser, smtpPass, staffNotificationEmails, portalBaseUrl]
+  },
+  async (event) => {
+    const familyId = event.params.familyId;
+    if (!safeId.test(familyId)) return;
+    const data = event.data?.data();
+    if (data?.intakeStatus !== "submitted") return;
+
+    const recipients = staffNotificationEmails.value().split(",").map((value) => value.trim()).filter(Boolean);
+    if (!recipients.length) return;
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: { user: smtpUser.value(), pass: smtpPass.value() }
+    });
+    await transporter.sendMail({
+      from: smtpUser.value(),
+      to: recipients,
+      ...buildFamilyNotification(portalBaseUrl.value())
+    });
   }
 );

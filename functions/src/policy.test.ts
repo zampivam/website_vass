@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { authorizeDownload, buildActivityRecord, buildUploadNotification } from "./policy.js";
+import { authorizeDownload, buildActivityRecord, buildFamilyNotification, buildUploadNotification } from "./policy.js";
 
 describe("server download authorization", () => {
   it("allows staff or the verified owning parent and denies every other user", () => {
@@ -16,6 +16,14 @@ describe("privacy-safe notifications", () => {
       subject: "New parent portal upload",
       text: "A new document was uploaded. Log in to view.\n\nhttps://vass2.giltunnel.org/admin",
       html: '<p>A new document was uploaded. Log in to view.</p><p><a href="https://vass2.giltunnel.org/admin">Open the staff portal</a></p>'
+    });
+  });
+
+  it("contains only fixed new-intake copy and the constant admin link", () => {
+    expect(buildFamilyNotification("https://www.vassllc.org")).toEqual({
+      subject: "New parent portal intake",
+      text: "A new parent portal intake was submitted. Log in to review.\n\nhttps://www.vassllc.org/admin",
+      html: '<p>A new parent portal intake was submitted. Log in to review.</p><p><a href="https://www.vassllc.org/admin">Open the staff portal</a></p>'
     });
   });
 });

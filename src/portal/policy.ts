@@ -55,3 +55,7 @@ export function safePortalError(error: unknown): string {
 
   return "We could not complete that request. Please try again or contact VASS.";
 }
+
+export function signupVerificationMessage(): string {
+  return 'Account created. Check your inbox or Spam folder for an email labeled "VASS IT", then verify your account before opening family records.';
+}
