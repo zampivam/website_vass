@@ -50,6 +50,18 @@ describe("document policy", () => {
 });
 
 describe("privacy-safe errors", () => {
+  it("guides a parent with an existing email to sign in or reset their password", () => {
+    expect(safePortalError({ code: "auth/email-already-in-use" })).toBe(
+      "An account already exists for this email. Log in or reset your password."
+    );
+  });
+
+  it("explains invalid login credentials without exposing account details", () => {
+    expect(safePortalError({ code: "auth/invalid-credential" })).toBe(
+      "Email or password is incorrect. Please try again or reset your password."
+    );
+  });
+
   it("does not expose upstream messages that may contain private information", () => {
     const upstream = new Error("Upload failed for Child Name insurance-card.jpg");
     expect(safePortalError(upstream)).toBe("We could not complete that request. Please try again or contact VASS.");

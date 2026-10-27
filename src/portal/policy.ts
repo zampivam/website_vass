@@ -39,6 +39,19 @@ export function validateDocument(candidate: DocumentCandidate):
   return { ok: true };
 }
 
-export function safePortalError(_error: unknown): string {
+export function safePortalError(error: unknown): string {
+  const code =
+    typeof error === "object" && error !== null && "code" in error && typeof error.code === "string"
+      ? error.code
+      : "";
+
+  if (code === "auth/email-already-in-use") {
+    return "An account already exists for this email. Log in or reset your password.";
+  }
+
+  if (code === "auth/invalid-credential") {
+    return "Email or password is incorrect. Please try again or reset your password.";
+  }
+
   return "We could not complete that request. Please try again or contact VASS.";
 }
