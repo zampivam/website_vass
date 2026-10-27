@@ -22,7 +22,7 @@ import {
   type ChildIntakeInput,
   type FamilyIntakeInput
 } from "./intake";
-import { safePortalError } from "./policy";
+import { portalIntroMessage, safePortalError } from "./policy";
 
 const emptyFamily: FamilyIntakeInput = {
   caregiverFirstName: "",
@@ -174,7 +174,7 @@ export function ParentPortal() {
       <div className="portal-intro">
         <LockKeyhole aria-hidden="true" />
         <h2>Parent document portal</h2>
-        <p>Sign in before entering family information or sharing documents with the VASS team.</p>
+        {portalIntroMessage(Boolean(user)) ? <p>{portalIntroMessage(Boolean(user))}</p> : null}
       </div>
 
       {!user ? <div className="portal-shell portal-shell--auth"><AuthPanel /></div> : !user.emailVerified ? (

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   canAccessAdmin,
   canAccessFamily,
+  portalIntroMessage,
   safePortalError,
   signupVerificationMessage,
   validateDocument
@@ -74,5 +75,12 @@ describe("signup verification guidance", () => {
     expect(signupVerificationMessage()).toBe(
       'Account created. Check your inbox or Spam folder for an email labeled "VASS IT", then verify your account before opening family records.'
     );
+  });
+});
+
+describe("portal introduction guidance", () => {
+  it("shows the sign-in warning only to signed-out visitors", () => {
+    expect(portalIntroMessage(false)).toBe("Sign in before entering family information or sharing documents with the VASS team.");
+    expect(portalIntroMessage(true)).toBeNull();
   });
 });

@@ -59,3 +59,7 @@ export function safePortalError(error: unknown): string {
 export function signupVerificationMessage(): string {
   return 'Account created. Check your inbox or Spam folder for an email labeled "VASS IT", then verify your account before opening family records.';
 }
+
+export function portalIntroMessage(signedIn: boolean): string | null {
+  return signedIn ? null : "Sign in before entering family information or sharing documents with the VASS team.";
+}
